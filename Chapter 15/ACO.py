@@ -13,7 +13,7 @@ alpha = 0.8
 beta = 1.0
 rho = 0.5
 pheromone_limit = 1.0
-number_of_iterations = 10
+number_of_iterations = 30
 
 
 def create_matrices(_N, _max_distance):

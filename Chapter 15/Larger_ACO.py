@@ -4,16 +4,14 @@ from scipy.spatial import Delaunay
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
-max_distance = 20
-max_steps = 60
-# ratio = 0.5  # total number of connections in the graph, max is N(N-1)
-number_of_ants = 20
+number_of_ants = 17
 alpha = 0.8
 beta = 1.0
 rho = 0.5
 max_pheromone_per_ant = 1.0
 number_of_iterations = 222
-
+max_distance = 20
+max_steps = 60
 
 def create_matrices(_N, _max_distance):
     # Location of vertice coordinates
@@ -107,6 +105,22 @@ def simplify_path_once(_path):
         _duplicate_indices.append(_temp_duplicate_element_indices)
     return _path_candidates, _duplicate_indices
 
+def store_candidates(_path_candidates, _duplicate_indices):
+    _simplified_paths = []
+    _path_candidates_list = []
+    _number_of_duplicates = len(_duplicate_indices)
+
+    if _number_of_duplicates == 0:
+        _simplified_paths.append(_path_candidates)
+        return _simplified_paths, _path_candidates_list
+    else:
+        for j in range(_number_of_duplicates):
+            if not _duplicate_indices[j]:
+                _simplified_paths.append(_path_candidates[j])
+            else:
+                _path_candidates_list.append(_path_candidates[j])
+    return _simplified_paths, _path_candidates_list
+
 
 def simplify_entire_path(_path):
     _duplicates = True
@@ -173,21 +187,6 @@ def simplify_and_return_shortest_path(_path):
     return _simplified_paths
 
 
-def store_candidates(_path_candidates, _duplicate_indices):
-    _simplified_paths = []
-    _path_candidates_list = []
-    _number_of_duplicates = len(_duplicate_indices)
-
-    if _number_of_duplicates == 0:
-        _simplified_paths.append(_path_candidates)
-        return _simplified_paths, _path_candidates_list
-    else:
-        for j in range(_number_of_duplicates):
-            if not _duplicate_indices[j]:
-                _simplified_paths.append(_path_candidates[j])
-            else:
-                _path_candidates_list.append(_path_candidates[j])
-    return _simplified_paths, _path_candidates_list
 
 
 def get_duplicates(_path):
