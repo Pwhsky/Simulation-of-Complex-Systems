@@ -74,11 +74,9 @@ def path_length(_path, _distance_matrix):
 def simplify_path_once(_path):
     _duplicate_element_indices = get_duplicates(_path)
     _number_of_duplicate_elements = len(_duplicate_element_indices)
-    
     # print(f"Duplicates on indices: {_duplicate_element_indices}")
     # print("------------")
     # print(f"path: {_path}")
-    
     _path_candidates = []
     _duplicate_indices = []
     for i in range(_number_of_duplicate_elements):

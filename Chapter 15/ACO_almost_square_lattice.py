@@ -1,19 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.spatial import Delaunay
+from scipy.spatial import Voronoi
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
-N_nodes = 100 
-max_distance = 20
-max_steps = 60
-# ratio = 0.5  # total number of connections in the graph, max is N_nodes(N_nodes-1)
+N = 20
+max_distance = 50
+max_steps = 200
+# ratio = 0.5  # total number of connections in the graph, max is N(N-1)
 number_of_ants = 20
 alpha = 0.8
-beta = 1.0
-rho = 0.5
-pheromone_limit = 1.0
-number_of_iterations = 10
+beta = 1.1
+rho = 0.9
+pheromone_limit = 1.0 #Q
+number_of_iterations = 1
 
 
 def create_matrices(_N, _max_distance):
@@ -23,15 +23,16 @@ def create_matrices(_N, _max_distance):
     _vertices = np.array([_vertice_array_x, _vertice_array_y]).T
 
     # Connection matrix
-    tri = Delaunay(_vertices)
-    number_of_triangles = len(tri.simplices)
+    vor = Voronoi(_vertices)
+    number_of_polygons = len(vor.regions)
     _connection_matrix = np.zeros([_N, _N])
-    for i in range(number_of_triangles):
+    
+    for i in range(number_of_polygons):
         for j in range(3):
             for k in range(3):
                 if j != k:
-                    _vertex_1 = tri.simplices[i, j]
-                    _vertex_2 = tri.simplices[i, k]
+                    _vertex_1 = vor.regions[i, j]
+                    _vertex_2 = vor.regions[i, k]
                     _connection_matrix[_vertex_1, _vertex_2] = 1
     _connection_matrix += _connection_matrix.T / 2
     _connection_matrix = _connection_matrix.astype(int)
@@ -53,7 +54,7 @@ def create_matrices(_N, _max_distance):
     np.fill_diagonal(_weight_matrix, 0)
 
     # Pheromone matrix
-    _pheromone_matrix = np.ones([N_nodes, N_nodes])
+    _pheromone_matrix = np.ones([N, N])
     _pheromone_matrix = np.where(_connection_matrix == 1, _pheromone_matrix, 0)
     return _connection_matrix, _vertice_array_x, _vertice_array_y, _distance_matrix, _weight_matrix, _pheromone_matrix
 
@@ -275,9 +276,9 @@ def pheromone_change(_shortest_length, _shortest_path, _pheromone_limit, _N):
 
 
 connection_matrix, vertice_array_x, vertice_array_y, distance_matrix, weight_matrix, pheromone_matrix = \
-    create_matrices(N_nodes, max_distance)
+    create_matrices(N, max_distance)
 
-index_range = np.arange(0, N_nodes, 1)
+index_range = np.arange(0, N, 1)
 start_location = np.random.choice(index_range)  # index of start location vertex
 index_range = np.delete(index_range, start_location)
 end_location = np.random.choice(index_range)
@@ -288,10 +289,10 @@ shortest_length_array = []
 
 for i in range(number_of_iterations):
     print(f"Current iteration: {i + 1}/{number_of_iterations}")
-    destination_reached = ant_simulation(number_of_ants, start_location, end_location, max_steps, alpha, beta, N_nodes,
+    destination_reached = ant_simulation(number_of_ants, start_location, end_location, max_steps, alpha, beta, N,
                                          connection_matrix, weight_matrix, pheromone_matrix)
     shortest_paths, shortest_lengths = simplify_all_paths(destination_reached)
-    pheromone_matrix = pheromone_update(pheromone_matrix, N_nodes, shortest_lengths, shortest_paths, alpha, beta, rho,
+    pheromone_matrix = pheromone_update(pheromone_matrix, N, shortest_lengths, shortest_paths, alpha, beta, rho,
                                         pheromone_limit)
     shortest_single_length = np.min(shortest_lengths)
     shortest_length_array.append(shortest_single_length)
@@ -304,7 +305,7 @@ for i in range(number_of_iterations):
 # Plotting data:
 # ---------------------------------------------------------------------------------------------------------------------
 
-annotations = np.arange(1, N_nodes + 1, 1)
+annotations = np.arange(1, N + 1, 1)
 
 fig1, ax1 = plt.subplots(1, figsize=(12, 12))
 ax1.plot(vertice_array_x, vertice_array_y, 'wo', markersize=12, markeredgecolor='black',
@@ -328,8 +329,8 @@ ax1.annotate(value, (vertice_array_x[end_location], vertice_array_y[end_location
 
 linewidth1 = 1
 linewidth2 = 2
-for i in range(N_nodes):
-    for j in range(N_nodes):
+for i in range(N):
+    for j in range(N):
         if connection_matrix[i, j] == 1:
             x_plot = np.array([vertice_array_x[i], vertice_array_x[j]])
             y_plot = np.array([vertice_array_y[i], vertice_array_y[j]])
@@ -372,8 +373,8 @@ linewidth2 = 2
 shortest_length_index = np.argmin(shortest_lengths)
 shortest_single_path = shortest_paths[shortest_length_index]
 
-for i in range(N_nodes):
-    for j in range(N_nodes):
+for i in range(N):
+    for j in range(N):
         if connection_matrix[i, j] == 1:
             x_plot = np.array([vertice_array_x[i], vertice_array_x[j]])
             y_plot = np.array([vertice_array_y[i], vertice_array_y[j]])
@@ -403,8 +404,8 @@ for i, value in enumerate(annotations):
         ax3[j].annotate(value, (vertice_array_x[i], vertice_array_y[i]), fontsize=10, color='black',
                         horizontalalignment='center', verticalalignment='center')
 
-for i in range(N_nodes):
-    for j in range(N_nodes):
+for i in range(N):
+    for j in range(N):
         if connection_matrix[i, j] == 1:
             x_plot = np.array([vertice_array_x[i], vertice_array_x[j]])
             y_plot = np.array([vertice_array_y[i], vertice_array_y[j]])
