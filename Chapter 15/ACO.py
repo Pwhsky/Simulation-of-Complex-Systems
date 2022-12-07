@@ -4,16 +4,16 @@ from scipy.spatial import Delaunay
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
-N_nodes = 100 
+N_nodes = 30 
 max_distance = 20
-max_steps = 60
+max_steps = 100
 # ratio = 0.5  # total number of connections in the graph, max is N_nodes(N_nodes-1)
 number_of_ants = 20
-alpha = 0.8
-beta = 1.0
+alpha = 0.6
+beta = 4
 rho = 0.5
 pheromone_limit = 1.0
-number_of_iterations = 10
+number_of_iterations = 30
 
 
 def create_matrices(_N, _max_distance):
@@ -102,35 +102,6 @@ def simplify_path_once(_path):
         _duplicate_indices.append(_temp_duplicate_element_indices)
     return _path_candidates, _duplicate_indices
 
-def simplify_and_return_shortest_path(_path):
-    _duplicates = True
-    _simplified_paths = []
-    _path_candidates = [_path]
-    _path_candidates_list = [_path]
-    while _duplicates:
-        _number_of_temp_paths = len(_path_candidates_list)
-        for i in range(_number_of_temp_paths):
-            _temp_path_candidates, _duplicate_indices = simplify_path_once(_path_candidates_list[i])
-            _temp_simplified_paths, _temp_path_candidates = store_candidates(_temp_path_candidates, _duplicate_indices)
-            _number_of_simplified_paths = len(_temp_simplified_paths)
-            # _simplified_paths = [_temp_simplified_paths[j] for j in range(_number_of_simplified_paths)]
-            for j in range(_number_of_simplified_paths):
-                _simplified_paths.append(_temp_simplified_paths[j])
-            _number_of_path_candidates = len(_temp_path_candidates)
-            for j in range(_number_of_path_candidates):
-                _path_candidates.append(_temp_path_candidates[j])
-            # _path_candidates = [_temp_path_candidates[j] for j in range(_number_of_path_candidates)]
-        _path_candidates_list = np.copy(_path_candidates)
-        _seen = set()
-        _path_candidates_list = [item for item in _path_candidates_list if
-                                 not (tuple(item) in _seen or _seen.add(tuple(item)))]
-        if len(_path_candidates_list) == 0:
-            _duplicates = False
-        _path_candidates = []
-
-    if not _simplified_paths:
-        _simplified_paths = _path
-    return _simplified_paths
 
 def simplify_entire_path(_path):
     _duplicates = True
@@ -166,6 +137,37 @@ def simplify_entire_path(_path):
     return _simplified_paths
 
 
+def simplify_and_return_shortest_path(_path):
+    _duplicates = True
+    _simplified_paths = []
+    _path_candidates = [_path]
+    _path_candidates_list = [_path]
+    while _duplicates:
+        _number_of_temp_paths = len(_path_candidates_list)
+        for i in range(_number_of_temp_paths):
+            _temp_path_candidates, _duplicate_indices = simplify_path_once(_path_candidates_list[i])
+            _temp_simplified_paths, _temp_path_candidates = store_candidates(_temp_path_candidates, _duplicate_indices)
+            _number_of_simplified_paths = len(_temp_simplified_paths)
+            # _simplified_paths = [_temp_simplified_paths[j] for j in range(_number_of_simplified_paths)]
+            for j in range(_number_of_simplified_paths):
+                _simplified_paths.append(_temp_simplified_paths[j])
+            _number_of_path_candidates = len(_temp_path_candidates)
+            for j in range(_number_of_path_candidates):
+                _path_candidates.append(_temp_path_candidates[j])
+            # _path_candidates = [_temp_path_candidates[j] for j in range(_number_of_path_candidates)]
+        _path_candidates_list = np.copy(_path_candidates)
+        _seen = set()
+        _path_candidates_list = [item for item in _path_candidates_list if
+                                 not (tuple(item) in _seen or _seen.add(tuple(item)))]
+        if len(_path_candidates_list) == 0:
+            _duplicates = False
+        _path_candidates = []
+
+    if not _simplified_paths:
+        _simplified_paths = _path
+    return _simplified_paths
+
+
 def store_candidates(_path_candidates, _duplicate_indices):
     _simplified_paths = []
     _path_candidates_list = []
@@ -191,7 +193,6 @@ def get_duplicates(_path):
     _indices_filter = np.split(_idx_sort, _idx_start[1:])  # indices of elements, length > 1 means duplicates
     _number_of_different_elements = len(_indices_filter)
     _duplicate_element_indices = []
-    
     for i in range(_number_of_different_elements):
         if len(_indices_filter[i]) > 1:
             _duplicate_element_indices.append(np.sort(_indices_filter[i]))
@@ -205,7 +206,6 @@ def ant_simulation(_number_of_ants, _start_location, _end_location, _number_of_s
     _destination_reached = []
     _path[0, :] = _start_location
     _searching = np.ones(_number_of_ants, dtype=bool)
-    
     for step in range(_number_of_steps):
         for ant in range(_number_of_ants):
             if _searching[ant]:
@@ -229,7 +229,6 @@ def simplify_all_paths(_destination_reached):
     for _successful_ant in range(_number_of_successful_ants):
         _simplified_unique_paths = simplify_entire_path(_destination_reached[_successful_ant])
         _number_of_simplified_paths = len(_simplified_unique_paths)
-        
         for _path in range(_number_of_simplified_paths):
             _length_of_simplified_path = path_length(_simplified_unique_paths[_path], distance_matrix)
             if _length_of_simplified_path < _shortest_length[_successful_ant]:
@@ -248,12 +247,6 @@ def path_probabilities(_weight_matrix, _pheromone_matrix, _alpha, _beta, _N):
             _path_probability_matrix[i, j] = _probability
     return _path_probability_matrix
 
-def pheromone_update(_pheromone_matrix, _N, _shortest_lengths, _shortest_paths, _alpha, _beta, _rho,
-                     _pheromone_limit):
-    _pheromone_matrix *= (1 - _rho)
-    _delta_pheromone = pheromone_change(_shortest_lengths, _shortest_paths, _pheromone_limit, _N)
-    _pheromone_matrix = _pheromone_matrix + _delta_pheromone
-    return _pheromone_matrix
 
 def pheromone_change(_shortest_length, _shortest_path, _pheromone_limit, _N):
     _delta_pheromone = np.zeros([_N, _N])
@@ -270,10 +263,15 @@ def pheromone_change(_shortest_length, _shortest_path, _pheromone_limit, _N):
     return _delta_pheromone
 
 
+def pheromone_update(_pheromone_matrix, _N, _shortest_lengths, _shortest_paths, _alpha, _beta, _rho,
+                     _pheromone_limit):
+    _pheromone_matrix *= (1 - _rho)
+    _delta_pheromone = pheromone_change(_shortest_lengths, _shortest_paths, _pheromone_limit, _N)
+    _pheromone_matrix += _delta_pheromone
+    return _pheromone_matrix
 
 
-
-
+# Pipeline
 connection_matrix, vertice_array_x, vertice_array_y, distance_matrix, weight_matrix, pheromone_matrix = \
     create_matrices(N_nodes, max_distance)
 
